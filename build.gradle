@@ -1,16 +1,21 @@
 plugins {
-    id 'java'
+    id'application'
+    id'com.github.johnrengelman.shadow' version '4.0.4'
 }
 
-group 'discord.projects'
-version '1.0-SNAPSHOT'
+mainClassName = 'discord.project.Main'
 
-sourceCompatibility = 1.8
+version '1.0'
+def jdaVersion = '4.0.0_73'
+
+sourceCompatibility = targetCompatibility = 1.8
 
 repositories {
-    mavenCentral()
+    jcenter()
 }
 
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile "net.dv8tion:JDA:$jdaVersion"
 }
+
+compileJava.options.encoding = 'UTF-8'
