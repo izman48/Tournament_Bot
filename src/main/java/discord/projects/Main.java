@@ -23,6 +23,8 @@ public class Main extends ListenerAdapter {
     private MessageChannel channel;
     private List<String> players = new ArrayList<>();;
     private String tournament_message;
+    private int numofplayers = 8;
+    private boolean started = false;
 
     public static void main(String[] args) throws Exception {
         try {
@@ -40,6 +42,7 @@ public class Main extends ListenerAdapter {
     public void onMessageReceived(MessageReceivedEvent event) {
         String author = event.getAuthor().getId();
         Message message = event.getMessage();
+        EmbedBuilder embedBuilder = new EmbedBuilder();
         channel = event.getChannel();
         if (event.getAuthor().getId().equals(botid)) {
             message.addReaction("✅").queue();
@@ -47,17 +50,62 @@ public class Main extends ListenerAdapter {
         }
         if (event.getChannel().getName().equals("general") && !event.getAuthor().getId().equals(botid)) {
             Guild guild = event.getGuild();
-
             String content = message.getContentRaw();
             String[] split = content.split("\\s+", -1);
-            if (isTarget(split[0], botid) && split[1].equals("!new")) {
-                EmbedBuilder embedBuilder = new EmbedBuilder();
-                embedBuilder.setTitle("New Tournament created.", null);
-                embedBuilder.setDescription("Players react to this message");
-                MessageEmbed m = embedBuilder.build();
+            List<Member> mentioned = message.getMentionedMembers();
 
-                channel.sendMessage(m).queue();
+            if (!started) {
+                if (split[0].equals("!new")) {
 
+                    embedBuilder.setTitle("New Tournament created.", null);
+                    embedBuilder.setDescription("Players react to this message");
+                    MessageEmbed m = embedBuilder.build();
+
+                    channel.sendMessage(m).queue();
+                }
+                if (isTarget(split[0], botid) && split[1].toLowerCase().equals("add")){
+                    for (Member m : mentioned) {
+                        if (!m.getId().equals(botid)) {
+                            System.out.println("Player: " + getName(m) + " has been added. Number of players is  : " + (players.size()+1));
+                            if (players.size() < numofplayers) {
+                                players.add(getName(m));
+                                if (players.size() == numofplayers) {
+                                    createTournament();
+                                }
+                            }
+                        }
+
+                    }
+                    embedBuilder.setTitle("New Tournament created.", null);
+                    embedBuilder.setDescription("Players who want to join react to this message");
+                    MessageEmbed m = embedBuilder.build();
+
+                    channel.sendMessage(m).queue();
+                }
+            } else {
+                if (split[0].toLowerCase().equals("!restart")) {
+                    createTournament();
+                }
+                if (split[0].toLowerCase().equals("!reset")) {
+                    players = new ArrayList<>();
+                    started = false;
+                    embedBuilder.setTitle("New Tournament created.", null);
+                    embedBuilder.setDescription("Players react to this message");
+                    MessageEmbed m = embedBuilder.build();
+
+                    channel.sendMessage(m).queue();
+                }
+            }
+
+
+            if (isTarget(split[0], botid) && split[1].toLowerCase().equals("remove")){
+                for (Member m : mentioned) {
+                    if (players.contains(getName(m))) {
+                        System.out.println("Player: " + getName(m) + " has been removed. Number of players is  : " + (players.size()+1));
+                        players.remove(getName(m));
+                    }
+                }
+            }
 //                channel.sendMessage("Thumbs this message").queue();
 //                ready = true;
 
@@ -72,7 +120,7 @@ public class Main extends ListenerAdapter {
 
                 // directly implement results into ladder
 
-            }
+
 
         }
     }
@@ -81,12 +129,13 @@ public class Main extends ListenerAdapter {
         if (!event.getUserId().equals(botid) && event.getMessageId().equals(tournament_message)) {
             Guild guild = event.getGuild();
             Member member = guild.getMember((event.getUser()));
-            if (players.size() < 8) {
+            if (!players.contains(getName(member)) && players.size() < numofplayers) {
                 players.add(getName(member));
+                if (players.size() == numofplayers) {
+                    createTournament();
+                }
             }
-            if (players.size() == 8) {
-                createTournament();
-            }
+
         }
 
 
@@ -115,21 +164,27 @@ public class Main extends ListenerAdapter {
     }
     private void createTournament() {
         //get players
+        started = true;
+        List<String> currentplayers = new ArrayList<>();
+        for (String player : players) {
+            currentplayers.add(player);
+        }
+        System.out.println("Start tournament also players .size() = " + players.size());
         Set<String> team1 = new HashSet<>();
         Set<String> team2 = new HashSet<>();
         Set<String> team3 = new HashSet<>();
         Set<String> team4 = new HashSet<>();
         Random rand = new Random();
-        String[] ordered = new String[players.size()];
+        String[] ordered = new String[currentplayers.size()];
 
 
 
         int i = 0;
-        while (players.size() > 0) {
-            int r = rand.nextInt(players.size());
-            System.out.println("R is: " + r + " Player is: " + players.get(r) + " i is: " + i);
-            ordered[i] = players.get(r);
-            players.remove(r);
+        while (currentplayers.size() > 0) {
+            int r = rand.nextInt(currentplayers.size());
+            System.out.println("R is: " + r + " Player is: " + currentplayers.get(r) + " i is: " + i);
+            ordered[i] = currentplayers.get(r);
+            currentplayers.remove(r);
             i++;
         }
         for (int n = 0; n < ordered.length; n++){
@@ -150,8 +205,9 @@ public class Main extends ListenerAdapter {
         String message = "```\nTeam 1: " + ordered[0] + " and " + ordered[1] + "\n" +
                 "Team 2: " + ordered[2] + " and " + ordered[3] + "\n" +
                 "Team 3: " + ordered[4] + " and " + ordered[5] + "\n" +
-                "Team 4: " + ordered[6] + " and " + ordered[7] + "\n ```";
+                "Team 4: " + ordered[6] + " and " + ordered[7] + " ```";
         channel.sendMessage(message).queue();
+        System.out.println("players.size() is now = " + players.size());
     }
 }
 
